@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LearnLoop
 
-## Getting Started
+Multi-tenant gamified learning platform. Portfolio project demonstrating RBAC, admin panel, gamification mechanics, webhook integrations, and PostgreSQL relational modeling on Next.js 16 + Prisma.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, RSC, Server Actions, Turbopack)
+- **React 19 · TypeScript · Tailwind v4** (mobile-first)
+- **Prisma 6 · PostgreSQL 16**
+- **Auth.js v5** (credentials; magic-link slot ready)
+- **Zod · Vitest · Playwright**
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+nvm use                  # Node 22 (see .nvmrc)
+pnpm install
+pnpm db:up               # Postgres 16 on port 5455
+cp .env.example .env     # adjust AUTH_SECRET etc.
+pnpm db:migrate          # apply initial schema
+pnpm db:seed             # 1 org, 3 users, 1 course with 10 lessons
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000> and sign in with one of the demo accounts:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Role       | Email                    | Password         |
+| ---------- | ------------------------ | ---------------- |
+| learner    | learner@demo.test        | `learner123`     |
+| instructor | instructor@demo.test     | `instructor123`  |
+| admin      | admin@demo.test          | `admin123`       |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Command             | What it does                       |
+| ------------------- | ---------------------------------- |
+| `pnpm dev`          | Next.js dev server                 |
+| `pnpm typecheck`    | `tsc --noEmit`                     |
+| `pnpm lint`         | ESLint                             |
+| `pnpm test`         | Vitest                             |
+| `pnpm db:up`        | Start Postgres via docker-compose  |
+| `pnpm db:migrate`   | Apply Prisma migrations (dev)      |
+| `pnpm db:reset`     | Drop + re-migrate + seed           |
+| `pnpm db:seed`      | Re-run demo seed                   |
+| `pnpm db:studio`    | Prisma Studio                      |
 
-To learn more about Next.js, take a look at the following resources:
+## Phase status
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [x] Phase 1 — foundation + data model (auth, RBAC middleware, shell pages, seed)
+- [ ] Phase 2 — learner experience + gamification engine
+- [ ] Phase 3 — admin panel + audit log
+- [ ] Phase 4 — analytics + exports + outbound webhooks
+- [ ] Phase 5 — polish + deploy + portfolio package
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `/home/atif/projects/portfolio/hands-on/HANDS-ON-learnloop.md` for the full spec.

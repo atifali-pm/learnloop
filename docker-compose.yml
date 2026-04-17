@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: learnloop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: learnloop
+      POSTGRES_PASSWORD: learnloop
+      POSTGRES_DB: learnloop
+    ports:
+      - "5455:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learnloop -d learnloop"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
