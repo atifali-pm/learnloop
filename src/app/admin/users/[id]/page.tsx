@@ -38,9 +38,17 @@ export default async function UserProfilePage({
         ← Users
       </Link>
 
-      <header>
-        <h1 className="text-2xl font-semibold">{target.name ?? target.email}</h1>
-        <p className="text-sm text-zinc-500">{target.email}</p>
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">{target.name ?? target.email}</h1>
+          <p className="text-sm text-zinc-500">{target.email}</p>
+        </div>
+        <a
+          href={`/admin/users/${target.id}/report.pdf`}
+          className="rounded border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          ↓ Report card PDF
+        </a>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-4">
