@@ -13,3 +13,27 @@ export async function requireRole(...roles: Role[]) {
   if (!roles.includes(user.role)) redirect("/forbidden");
   return user;
 }
+
+/**
+ * Admins have org-wide access; other roles only pass if they own the target.
+ */
+export async function requireOwnerOrAdmin(ownerUserId: string) {
+  const user = await requireUser();
+  if (user.role !== "admin" && user.id !== ownerUserId) {
+    redirect("/forbidden");
+  }
+  return user;
+}
+
+/**
+ * Guard for cross-tenant reads: throws if the target row's organizationId
+ * does not match the current user's.
+ */
+export function assertSameTenant(
+  user: { organizationId: string },
+  resource: { organizationId: string } | null | undefined,
+) {
+  if (!resource || resource.organizationId !== user.organizationId) {
+    redirect("/forbidden");
+  }
+}
