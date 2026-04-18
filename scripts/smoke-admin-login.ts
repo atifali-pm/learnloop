@@ -3,13 +3,6 @@ import "dotenv/config";
 const PORT = process.env.SMOKE_PORT ?? "3001";
 const BASE = `http://localhost:${PORT}`;
 
-function parseSetCookie(header: string | null): string[] {
-  if (!header) return [];
-  // Naive splitter: cookies are comma-separated, but Expires can contain commas.
-  // Node 18+ fetch exposes headers.getSetCookie() — use that.
-  return [];
-}
-
 async function main() {
   // 1. Hit csrf endpoint to obtain csrfToken + cookie.
   const csrfRes = await fetch(`${BASE}/api/auth/csrf`);

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: learnloop
+          POSTGRES_PASSWORD: learnloop
+          POSTGRES_DB: learnloop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U learnloop"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://learnloop:learnloop@localhost:5432/learnloop?schema=public
+      AUTH_SECRET: ci-only-secret-32-bytes-xxxxxxxxxxxxxxxx
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply Prisma migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit + integration tests
+        run: pnpm test
+
+      - name: Seed + run smoke
+        run: |
+          pnpm db:seed
+          pnpm exec tsx scripts/smoke-complete.ts
+
+      - name: Build
+        run: pnpm build

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { signPayload } from "./signer";
+import { reportError } from "@/lib/logger";
 
 const MAX_ATTEMPTS = 8;
 const BASE_BACKOFF_SECONDS = 30;
@@ -93,6 +94,7 @@ export async function processOneDelivery(deliveryId: string): Promise<DeliveryRe
     };
   } catch (e) {
     const err = e instanceof Error ? e.message : "unknown_error";
+    reportError(e, { deliveryId, endpoint: delivery.endpoint.url, attempts });
     const giveUp = attempts >= MAX_ATTEMPTS;
     await prisma.webhookDelivery.update({
       where: { id: delivery.id },
