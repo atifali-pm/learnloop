@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { computeStreak } from "./streaks";
 import { evaluateGating, parseGatingRule } from "./gating";
 import { evaluateBadges } from "./badges";
+import { enqueueWebhookEvent } from "@/lib/webhooks/queue";
 
 export type CompleteLessonResult =
   | {
@@ -144,6 +145,60 @@ export async function completeLesson(params: {
       lessonsCompleted: totalCompleted,
     },
   });
+
+  if (!alreadyCompleted) {
+    await enqueueWebhookEvent({
+      organizationId: user.organizationId,
+      event: "lesson.completed",
+      payload: {
+        userId,
+        userEmail: user.email,
+        lessonId: lesson.id,
+        lessonOrder: lesson.order,
+        lessonTitle: lesson.title,
+        courseId: lesson.courseId,
+        xpAwarded: result.xpAwarded,
+        totalXp,
+        currentStreak: result.streak.current,
+        completedAt: now.toISOString(),
+      },
+    });
+
+    if (result.streak.current > (result.streak.broken ? 1 : 0) && !result.streak.alreadyCountedToday) {
+      await enqueueWebhookEvent({
+        organizationId: user.organizationId,
+        event: "streak.extended",
+        payload: {
+          userId,
+          userEmail: user.email,
+          current: result.streak.current,
+          longest: result.streak.longest,
+          at: now.toISOString(),
+        },
+      });
+    }
+
+    if (badgesAwarded.length > 0) {
+      const badgeRows = await prisma.badge.findMany({
+        where: { id: { in: badgesAwarded } },
+        select: { id: true, slug: true, name: true },
+      });
+      for (const b of badgeRows) {
+        await enqueueWebhookEvent({
+          organizationId: user.organizationId,
+          event: "badge.awarded",
+          payload: {
+            userId,
+            userEmail: user.email,
+            badgeId: b.id,
+            badgeSlug: b.slug,
+            badgeName: b.name,
+            awardedAt: now.toISOString(),
+          },
+        });
+      }
+    }
+  }
 
   return {
     ok: true,

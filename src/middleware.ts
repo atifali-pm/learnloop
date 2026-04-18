@@ -8,7 +8,8 @@ export default auth((req) => {
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/forbidden") ||
-    pathname.startsWith("/api/auth");
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/webhooks/drain");
 
   if (isPublic) return NextResponse.next();
 
