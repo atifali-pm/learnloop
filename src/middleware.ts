@@ -10,6 +10,7 @@ export default auth((req) => {
     pathname.startsWith("/forbidden") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhooks/drain") ||
+    pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/health");
 
   if (isPublic) return NextResponse.next();

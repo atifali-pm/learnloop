@@ -8,7 +8,11 @@ export type AuditAction =
   | "course.update"
   | "course.publish"
   | "course.unpublish"
-  | "course.delete";
+  | "course.delete"
+  | "lesson.create"
+  | "lesson.update"
+  | "lesson.reorder"
+  | "lesson.delete";
 
 export async function writeAuditLog(params: {
   organizationId: string;
