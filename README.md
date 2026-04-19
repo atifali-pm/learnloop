@@ -2,6 +2,21 @@
 
 > Multi-tenant gamified learning platform. Built to demonstrate RBAC, admin panel, gamification mechanics, webhook integrations, PostgreSQL relational modeling, and mobile-first UX on Next.js 16 + Prisma.
 
+## Explain it like I'm 13
+
+Imagine Duolingo, but you (or your school, or your gym) can run your own copy of it.
+
+- **Learners** open the app on their phone, see today's lesson, tap "mark complete," and watch their **streak** go up and their **XP** fill a bar. Keep showing up and you level up and earn **badges**.
+- **Teachers/admins** open a desktop panel to add courses and lessons, see who's active, who's winning the XP leaderboard, and download a progress spreadsheet or a shiny PDF report card for any learner.
+- **Other apps** can hook in: whenever a learner finishes a lesson, LearnLoop can send a signed message to a URL you pick (a "webhook") that says "hey, Lena just finished Lesson 3, gave her 10 XP." The signature proves the message really came from LearnLoop and wasn't tampered with.
+
+Under the hood it's two big ideas:
+
+1. **Rules are pure functions.** Streaks, unlocking the next lesson, and "did you just earn a badge?" are all tiny functions that take your current state in and return the new state out. Because they're pure, we can test them with dozens of tricky cases (like daylight-savings time, or someone playing at 11:59 pm then again at 12:01 am) without ever touching the database.
+2. **Everything important leaves a receipt.** Every XP point is a row in an append-only ledger. Every admin action writes to an audit log. Every webhook send tracks its attempts. So if anything ever looks wrong, you can trace exactly what happened and when.
+
+That's basically it. The rest of the README is the boring-adult version.
+
 ## Why this repo exists
 
 Portfolio project. The brief (from a real $35-75/hr job posting) called for a SaaS dashboard with RBAC, an admin panel, outbound webhooks, and PostgreSQL. LearnLoop implements every item in that brief inside one coherent product — a gamified daily-habits learning app — so the reviewer sees how the pieces fit together, not just that each one exists.
