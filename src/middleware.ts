@@ -38,5 +38,8 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Exclude Next.js internals, favicon, and anything that looks like a file
+  // (contains a dot). That keeps /screenshots/*.png and any other static asset
+  // under /public out of the auth gate.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
