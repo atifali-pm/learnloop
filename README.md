@@ -35,6 +35,17 @@ Portfolio project. The brief (from a real $35-75/hr job posting) called for a Sa
 | Charts | Recharts | DAU line, completion funnel bar |
 | Testing | Vitest, Playwright-ready | 30 tests covering engine + signer + audit integration |
 
+## Screenshots
+
+| Learner (mobile, Pixel 7) | Admin (desktop) |
+| :--- | :--- |
+| ![Learner dashboard with streak, level, XP bar, lesson list](docs/screenshots/02-learner-dashboard.png) | ![Admin overview with user, course, and XP counts](docs/screenshots/05-admin-overview.png) |
+| ![Lesson detail with mark-complete CTA](docs/screenshots/03-learner-lesson.png) | ![Filterable user management table](docs/screenshots/06-admin-users.png) |
+| ![Lesson marked complete with reward toast and next lesson CTA](docs/screenshots/04-learner-lesson-completed.png) | ![Analytics dashboard with DAU, funnel, top learners, retention](docs/screenshots/07-admin-analytics.png) |
+| ![Landing page on mobile](docs/screenshots/01-landing-mobile.png) | ![Webhook endpoint detail with signing secret and delivery log](docs/screenshots/08-admin-webhook-detail.png) |
+| &nbsp; | ![Course edit with full lesson CRUD](docs/screenshots/09-admin-course-edit.png) |
+| &nbsp; | ![Audit log viewer with action filter](docs/screenshots/10-admin-audit-log.png) |
+
 ## Quick start
 
 ```bash
