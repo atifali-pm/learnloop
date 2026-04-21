@@ -1,39 +1,21 @@
 # LearnLoop
 
-> Multi-tenant gamified learning platform. Built to demonstrate RBAC, admin panel, gamification mechanics, webhook integrations, PostgreSQL relational modeling, and mobile-first UX on Next.js 16 + Prisma.
+A multi-tenant gamified learning platform. Learners complete daily lessons, earn XP, keep streaks alive, and unlock the next level. Admins run the system through a role-gated panel with user management, course authoring, analytics, exports, and HMAC-signed webhooks.
+
+Live: https://learnloop-ruby.vercel.app
 
 ## Explain it like I'm 13
 
 Imagine Duolingo, but you (or your school, or your gym) can run your own copy of it.
 
 - **Learners** open the app on their phone, see today's lesson, tap "mark complete," and watch their **streak** go up and their **XP** fill a bar. Keep showing up and you level up and earn **badges**.
-- **Teachers/admins** open a desktop panel to add courses and lessons, see who's active, who's winning the XP leaderboard, and download a progress spreadsheet or a shiny PDF report card for any learner.
-- **Other apps** can hook in: whenever a learner finishes a lesson, LearnLoop can send a signed message to a URL you pick (a "webhook") that says "hey, Lena just finished Lesson 3, gave her 10 XP." The signature proves the message really came from LearnLoop and wasn't tampered with.
+- **Teachers and admins** open a desktop panel to add courses and lessons, see who's active, see who's winning the XP leaderboard, and download a progress spreadsheet or a PDF report card for any learner.
+- **Other apps** can hook in. Whenever a learner finishes a lesson, LearnLoop can send a signed message to a URL you pick (a "webhook") that says "hey, Lena just finished Lesson 3, gave her 10 XP." The signature proves the message really came from LearnLoop and wasn't tampered with.
 
-Under the hood it's two big ideas:
+Under the hood there are two big ideas:
 
-1. **Rules are pure functions.** Streaks, unlocking the next lesson, and "did you just earn a badge?" are all tiny functions that take your current state in and return the new state out. Because they're pure, we can test them with dozens of tricky cases (like daylight-savings time, or someone playing at 11:59 pm then again at 12:01 am) without ever touching the database.
-2. **Everything important leaves a receipt.** Every XP point is a row in an append-only ledger. Every admin action writes to an audit log. Every webhook send tracks its attempts. So if anything ever looks wrong, you can trace exactly what happened and when.
-
-That's basically it. The rest of the README is the boring-adult version.
-
-## Why this repo exists
-
-Portfolio project. The brief (from a real $35-75/hr job posting) called for a SaaS dashboard with RBAC, an admin panel, outbound webhooks, and PostgreSQL. LearnLoop implements every item in that brief inside one coherent product — a gamified daily-habits learning app — so the reviewer sees how the pieces fit together, not just that each one exists.
-
-## Stack
-
-| Layer | Choice | Reason |
-| --- | --- | --- |
-| Frontend | Next.js 16 App Router, React 19, Tailwind v4 | Server components + Server Actions keep the surface area small |
-| Styling | Tailwind, mobile-first | Phone-first default, desktop is the enhancement |
-| Auth | Auth.js v5 (credentials + magic-link slot) | JWT carries role + tenant so middleware gates pages without a DB round-trip |
-| DB | Postgres 16 + Prisma 6 | Prisma 7 has breaking changes the ecosystem hasn't caught up to |
-| Gamification | Pure TS functions with Vitest | Streaks, gating, badge rules all unit-tested, including DST edges |
-| Webhooks | HMAC-SHA256 signer + queue + worker | Exponential backoff + jitter, capped at 8 attempts |
-| Exports | `@react-pdf/renderer`, `papaparse` | Server-rendered PDF report cards, CSV progress dumps |
-| Charts | Recharts | DAU line, completion funnel bar |
-| Testing | Vitest, Playwright-ready | 30 tests covering engine + signer + audit integration |
+1. **Rules are pure functions.** Streaks, unlocking the next lesson, and "did you just earn a badge?" are all small functions that take your current state in and return the new state out. Because they're pure, they can be tested with dozens of tricky cases (like daylight-savings transitions, or someone playing at 11:59 pm then again at 12:01 am) without ever touching the database.
+2. **Everything important leaves a receipt.** Every XP point is a row in an append-only ledger. Every admin action writes to an audit log. Every webhook send tracks its attempts. If anything ever looks wrong, you can trace exactly what happened and when.
 
 ## Screenshots
 
@@ -46,80 +28,44 @@ Portfolio project. The brief (from a real $35-75/hr job posting) called for a Sa
 | &nbsp; | ![Course edit with full lesson CRUD](docs/screenshots/09-admin-course-edit.png) |
 | &nbsp; | ![Audit log viewer with action filter](docs/screenshots/10-admin-audit-log.png) |
 
-## Quick start
+## Phases / Milestones
 
-```bash
-nvm use                  # Node 22 (.nvmrc)
-pnpm install
-pnpm db:up               # Postgres 16 via docker-compose on :5455
-cp .env.example .env     # set AUTH_SECRET, WEBHOOK_DRAIN_SECRET
-pnpm db:migrate
-pnpm db:seed             # 1 org, 3 roles, 1 course, 10 lessons, 3 badges
-pnpm dev
-```
+- [x] **Phase 1.** Foundation: Next.js App Router, Prisma schema, Auth.js credentials, seed with 1 org, 3 roles, 1 course, 10 lessons, 3 badges.
+- [x] **Phase 2.** Gamification engine: pure TypeScript for streaks, gating, badges, XP level curve. 30 Vitest tests including DST transitions and UTC midnight edges.
+- [x] **Phase 3.** Admin panel: filterable user list, role change with self-demote protection, disable / enable, course CRUD with lesson authoring, audit log on every mutation.
+- [x] **Phase 4.** Analytics, exports, webhooks: DAU chart, completion funnel, top learners, retention cohorts, CSV progress dump, streamed PDF report cards, HMAC-SHA256 outbound webhooks with exponential backoff and retry.
+- [x] **Phase 5.** Polish and deploy: health endpoint, error boundaries, skeleton loading states, Playwright happy path on Pixel 7, GitHub Actions CI, Vercel plus Railway deploy.
+- [x] **Phase 6.** Mobile companion app: pnpm workspace, shared `@learnloop/types`, Bearer-JWT `/api/mobile/*` endpoints, Expo React Native app with signin, tabs for Home / Courses / Profile, and a lesson screen with animated reward toast.
+- [ ] 90-second demo video.
+- [ ] Fiverr portfolio upload and LinkedIn Projects entry.
 
-Sign in at <http://localhost:3000/login>:
+## User stories / Use cases
 
-| Role | Email | Password |
-| --- | --- | --- |
-| learner | learner@demo.test | `learner123` |
-| instructor | instructor@demo.test | `instructor123` |
-| admin | admin@demo.test | `admin123` |
+### Learner
 
-## What you'll find
+- **Sign in on my phone in under 10 seconds.** Three demo accounts are one tap away from the signin screen.
+- **See whether I'm on a streak.** Open the home tab, see the fire counter and today's next lesson without scrolling.
+- **Finish a lesson and feel the reward.** Tap "mark complete," see a +10 XP toast, watch the XP bar fill, and get the next lesson suggested right below.
+- **Know what's locked and why.** Lessons that need a previous lesson (or a certain XP total) show the reason inline, so I'm not guessing.
+- **Pick up where I left off.** The home screen's "next up" always points at the first unlocked lesson I haven't finished.
+- **See my badges.** Profile tab lists every badge I've earned, with the date.
 
-- `/` — marketing landing
-- `/login` — credentials login
-- `/dashboard` — role-aware hub
-- `/learner` — mobile-first streak + XP + lesson list (the daily driver)
-- `/learner/lessons/[id]` — lesson detail with "mark complete" → reward toast
-- `/admin` — overview stats (users, courses, completions, XP)
-- `/admin/users` — filterable user list + [profile](src/app/admin/users/[id]/page.tsx) with role change + disable/enable
-- `/admin/courses` — list + inline create + edit + publish toggle
-- `/admin/analytics` — DAU, completion funnel, top learners, retention grid
-- `/admin/webhooks` — endpoint CRUD, signing secret, delivery log, per-row retry
-- `/admin/audit` — every admin mutation, filterable by action
+### Admin
 
-## The interesting parts
+- **Add a new team member.** Go to Users, search for them, change their role from learner to instructor or admin. The old role and new role both land in the audit log.
+- **Suspend a user.** Disable their account from their profile page. They can no longer sign in. The audit log records the action and who did it.
+- **Create a course and its lessons.** From Courses, create the course with a slug and title, then add lessons one at a time with a title, content, XP reward, and optional gating rule JSON (for example, `{"requiresLessonOrder": 1}`). Publish when ready.
+- **See who's active.** Open Analytics for daily active users over the last 30 days, a completion funnel per lesson, the top-10 learners by XP, and a weekly retention grid.
+- **Export progress.** Download a CSV with every completed lesson across the org, or a single learner's PDF report card with stats, badges, and a per-course lesson table.
+- **Wire LearnLoop into another system.** Register a webhook endpoint, pick the events (lesson.completed, badge.awarded, streak.extended), and receive signed JSON payloads. The delivery log shows attempts, the last error, and lets me retry a specific delivery.
 
-- **Gamification rules engine** — pure functions for streak (DST-safe), gating, badges, level curve, composed inside a single Prisma transaction. See **[GAMIFICATION.md](docs/GAMIFICATION.md)** — this is the hero doc.
-- **RBAC in three layers** — middleware short-circuit, `requireRole()` at the page, `assertSameTenant()` at the resource. Server actions re-check because middleware doesn't run on them.
-- **Webhook signer** — HMAC-SHA256 over `ts.deliveryId.body`, 5-minute timestamp tolerance, timing-safe compare. Round-trip + tamper + stale-timestamp tests in [`tests/webhook-signer.test.ts`](tests/webhook-signer.test.ts).
-- **Audit log as a real API** — every admin mutation writes a typed row. The admin log viewer filters by action and groups counts, so you can see "who changed role 12 times last week" at a glance.
+### External system (webhook receiver)
 
-## Docs
+- **Trust that a request really came from LearnLoop.** Every request carries `X-LearnLoop-Signature: sha256=<hex>` computed over `timestamp.deliveryId.body`. Verifying with the endpoint's secret gives me both authentication and integrity.
+- **Not get spammed by retries forever.** If my endpoint returns 5xx, LearnLoop retries with exponential backoff and jitter, then gives up after 8 attempts.
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — request lifecycles + deployment topology with mermaid diagrams
-- [DATA-MODEL.md](docs/DATA-MODEL.md) — ERD + indexing posture
-- [GAMIFICATION.md](docs/GAMIFICATION.md) — rules engine design decisions
-- [DEPLOYMENT.md](docs/DEPLOYMENT.md) — Vercel + Railway runbook
+### Developer / future maintainer
 
-## Scripts
-
-| Command | What it does |
-| --- | --- |
-| `pnpm dev` | Next.js dev server |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | ESLint |
-| `pnpm test` | Vitest (30 tests) |
-| `pnpm build` | Production build |
-| `pnpm db:up` | docker-compose Postgres up |
-| `pnpm db:migrate` | Apply Prisma migrations (dev) |
-| `pnpm db:reset` | Drop + re-migrate + seed |
-| `pnpm db:seed` | Re-run demo seed |
-| `pnpm db:studio` | Prisma Studio |
-| `pnpm exec tsx scripts/smoke-complete.ts` | E2E gamification smoke |
-| `pnpm exec tsx scripts/smoke-exports.ts` | E2E CSV + PDF smoke |
-| `pnpm exec tsx scripts/smoke-webhooks.ts` | E2E signed webhook fan-out + retry |
-
-## CI
-
-GitHub Actions runs typecheck + lint + tests + build on every push (see [.github/workflows/ci.yml](.github/workflows/ci.yml)).
-
-## Status
-
-Phase 5 (polish + deploy) — in progress. Phases 1-4 shipped: scaffold, gamification engine, admin panel, analytics + exports + HMAC webhooks.
-
-## License
-
-Source-available for portfolio review. Not currently open-source licensed.
+- **Read one doc to understand the rules engine.** `docs/GAMIFICATION.md` covers every decision: why streaks are computed in the user's local timezone, what the gating rule schema looks like, how the badge rule matcher is a discriminated union, and why the XP ledger is append-only.
+- **Read another doc to understand request lifecycles.** `docs/ARCHITECTURE.md` has mermaid diagrams for "learner completes a lesson" and "admin changes a role," including webhook fan-out.
+- **Run the whole stack on a fresh laptop in under 5 minutes.** `nvm use && pnpm install && pnpm db:up && pnpm db:migrate && pnpm db:seed && pnpm dev`.
