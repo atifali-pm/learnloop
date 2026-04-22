@@ -1,21 +1,23 @@
 # LearnLoop
 
-A multi-tenant gamified learning platform. Learners complete daily lessons, earn XP, keep streaks alive, and unlock the next level. Admins run the system through a role-gated panel with user management, course authoring, analytics, exports, and HMAC-signed webhooks.
+A multi-tenant gamified learning platform. Learners complete daily lessons, earn XP, keep streaks alive, and unlock the next level. Admins run the system through a role-gated panel with user management, course authoring, analytics, exports, and HMAC-signed webhooks. There's also a companion Android app for learners that talks to the same backend.
 
-Live: https://learnloop-ruby.vercel.app
+- Web: https://learnloop-ruby.vercel.app
+- Android APK: https://expo.dev/artifacts/eas/srpunJGAxfW26wMfndJAeC.apk
 
 ## Explain it like I'm 13
 
 Imagine Duolingo, but you (or your school, or your gym) can run your own copy of it.
 
-- **Learners** open the app on their phone, see today's lesson, tap "mark complete," and watch their **streak** go up and their **XP** fill a bar. Keep showing up and you level up and earn **badges**.
+- **Learners** open the app on their phone, see today's lesson, tap "mark complete," and watch their **streak** go up and their **XP** fill a bar. Keep showing up, level up, and collect **badges**. Works in any mobile browser, and there's a real **Android app** too if you want the full phone experience.
 - **Teachers and admins** open a desktop panel to add courses and lessons, see who's active, see who's winning the XP leaderboard, and download a progress spreadsheet or a PDF report card for any learner.
 - **Other apps** can hook in. Whenever a learner finishes a lesson, LearnLoop can send a signed message to a URL you pick (a "webhook") that says "hey, Lena just finished Lesson 3, gave her 10 XP." The signature proves the message really came from LearnLoop and wasn't tampered with.
 
-Under the hood there are two big ideas:
+Under the hood there are three big ideas:
 
 1. **Rules are pure functions.** Streaks, unlocking the next lesson, and "did you just earn a badge?" are all small functions that take your current state in and return the new state out. Because they're pure, they can be tested with dozens of tricky cases (like daylight-savings transitions, or someone playing at 11:59 pm then again at 12:01 am) without ever touching the database.
 2. **Everything important leaves a receipt.** Every XP point is a row in an append-only ledger. Every admin action writes to an audit log. Every webhook send tracks its attempts. If anything ever looks wrong, you can trace exactly what happened and when.
+3. **Web and phone share one brain.** The website and the Android app hit the same database and run the exact same "mark this lesson complete" code. The website uses a browser cookie to stay signed in. The phone uses a small signed ticket (a JWT). The doors are different, the room behind them is the same, so a new feature only has to be built once.
 
 ## Screenshots
 
