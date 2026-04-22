@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { authenticateMobileRequest, mobileJson } from "@/lib/mobile-auth";
 import { evaluateGating, parseGatingRule } from "@/lib/gamification/gating";
+import { parseQuiz, redactQuizForLearner } from "@/lib/gamification/quiz";
 import type { CoursesResponse, MobileCourse, MobileLesson } from "@learnloop/types";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export async function GET(req: Request) {
         completedLessonOrders: completedOrders,
         currentXp: totalXp,
       });
+      const quiz = parseQuiz(l.quiz);
       return {
         id: l.id,
         order: l.order,
@@ -48,6 +50,7 @@ export async function GET(req: Request) {
         completed: completedLessonIds.has(l.id),
         unlocked: gating.unlocked,
         lockReason: gating.unlocked ? null : gating.reason,
+        quiz: quiz ? redactQuizForLearner(quiz) : null,
       };
     });
 

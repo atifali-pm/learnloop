@@ -3,6 +3,7 @@ import { computeStreak } from "./streaks";
 import { evaluateGating, parseGatingRule } from "./gating";
 import { evaluateBadges } from "./badges";
 import { enqueueWebhookEvent } from "@/lib/webhooks/queue";
+import { gradeQuiz, parseQuiz, type QuizAnswers, type QuizGradeResult } from "./quiz";
 
 export type CompleteLessonResult =
   | {
@@ -12,12 +13,14 @@ export type CompleteLessonResult =
       totalXp: number;
       streak: { current: number; longest: number };
       badgesAwarded: string[];
+      quiz?: { grade: QuizGradeResult };
     }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; quiz?: { grade: QuizGradeResult } };
 
 export async function completeLesson(params: {
   userId: string;
   lessonId: string;
+  answers?: QuizAnswers;
 }): Promise<CompleteLessonResult> {
   const { userId, lessonId } = params;
 
@@ -58,6 +61,22 @@ export async function completeLesson(params: {
   if (!gating.unlocked) return { ok: false, reason: gating.reason };
 
   const alreadyCompleted = completedOrders.has(lesson.order);
+
+  // If the lesson has a quiz, require all-correct answers before granting credit.
+  // Skip the check on re-completion since the lesson is already marked done.
+  const quiz = parseQuiz(lesson.quiz);
+  let quizGrade: QuizGradeResult | undefined;
+  if (quiz && !alreadyCompleted) {
+    const answers = params.answers ?? {};
+    quizGrade = gradeQuiz(quiz, answers);
+    if (!quizGrade.allCorrect) {
+      return {
+        ok: false,
+        reason: `Got ${quizGrade.correctCount} of ${quizGrade.totalCount} correct. Review the lesson and try again.`,
+        quiz: { grade: quizGrade },
+      };
+    }
+  }
 
   const now = new Date();
 
@@ -207,5 +226,6 @@ export async function completeLesson(params: {
     totalXp,
     streak: { current: result.streak.current, longest: result.streak.longest },
     badgesAwarded,
+    quiz: quizGrade ? { grade: quizGrade } : undefined,
   };
 }

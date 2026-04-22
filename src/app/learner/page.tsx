@@ -30,6 +30,27 @@ export default async function LearnerHome() {
         </Link>
       </header>
 
+      <nav className="grid grid-cols-3 gap-2 text-sm">
+        <Link
+          href="/learner/leaderboard"
+          className="rounded-lg border border-zinc-200 px-3 py-2 text-center hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+        >
+          🏆 Leaderboard
+        </Link>
+        <Link
+          href="/learner/catalog"
+          className="rounded-lg border border-zinc-200 px-3 py-2 text-center hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+        >
+          📚 Catalog
+        </Link>
+        <Link
+          href="/learner/settings"
+          className="rounded-lg border border-zinc-200 px-3 py-2 text-center hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+        >
+          ⚙️ Settings
+        </Link>
+      </nav>
+
       <section className="grid grid-cols-3 gap-3">
         <StatCard
           label="Streak"

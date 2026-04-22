@@ -132,6 +132,8 @@ model Lesson {
   xpReward    Int      @default(10)
   /// JSON: { requiresLessonIds?: string[], requiresXp?: number }
   gatingRule  Json     @default("{}")
+  /// JSON: { questions: [{ id, prompt, choices: [{ id, text, correct }], explanation? }] }
+  quiz        Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -1,6 +1,6 @@
 /**
  * Wire types shared between the LearnLoop web backend (/api/mobile/*) and
- * the LearnLoop mobile app. Keep this pure TypeScript — no runtime deps.
+ * the LearnLoop mobile app. Keep this pure TypeScript, no runtime deps.
  */
 
 export type Role = "learner" | "instructor" | "admin";
@@ -77,9 +77,36 @@ export type MobileLesson = {
   completed: boolean;
   unlocked: boolean;
   lockReason: string | null;
+  quiz?: MobileQuiz | null;
+};
+
+export type MobileQuizChoice = {
+  id: string;
+  text: string;
+};
+
+export type MobileQuizQuestion = {
+  id: string;
+  prompt: string;
+  choices: MobileQuizChoice[];
+};
+
+export type MobileQuiz = {
+  questions: MobileQuizQuestion[];
+};
+
+export type MobileQuizGrade = {
+  correctCount: number;
+  totalCount: number;
+  allCorrect: boolean;
+  wrong: { questionId: string; pickedChoiceId: string | null; correctChoiceId: string | null }[];
 };
 
 // POST /api/mobile/lessons/[id]/complete
+export type CompleteLessonRequest = {
+  answers?: Record<string, string>;
+};
+
 export type CompleteLessonResponse =
   | {
       ok: true;
@@ -89,5 +116,46 @@ export type CompleteLessonResponse =
       level: number;
       streak: { current: number; longest: number };
       badgesAwarded: string[];
+      quiz?: { grade: MobileQuizGrade };
     }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; quiz?: { grade: MobileQuizGrade } };
+
+// GET /api/mobile/leaderboard
+export type LeaderboardEntry = {
+  userId: string;
+  name: string | null;
+  email: string;
+  totalXp: number;
+  rank: number;
+  isSelf?: boolean;
+};
+
+export type LeaderboardResponse = {
+  top: LeaderboardEntry[];
+  self: (LeaderboardEntry & { rank: number }) | null;
+};
+
+// GET /api/mobile/catalog (courses the user is NOT enrolled in yet)
+export type CatalogResponse = {
+  courses: CatalogCourse[];
+};
+
+export type CatalogCourse = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  lessonCount: number;
+  totalXp: number;
+};
+
+// POST /api/mobile/enrollments
+export type EnrollRequest = {
+  courseId: string;
+};
+
+export type EnrollResponse = {
+  ok: true;
+  enrollmentId: string;
+  courseId: string;
+};

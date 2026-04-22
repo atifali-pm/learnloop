@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { HABIT_LOOP_101 } from "../prisma/seed-content";
 
 const prisma = new PrismaClient();
 
@@ -45,31 +46,28 @@ async function main() {
     },
   });
 
-  const lessonTitles = [
-    "Why habits beat motivation",
-    "The 2-minute rule",
-    "Stacking cues",
-    "Designing the environment",
-    "Tracking the loop",
-    "Streak psychology",
-    "Rewards that stick",
-    "When to skip (and why)",
-    "Re-starting after a break",
-    "Graduating the loop",
-  ];
-
-  for (let i = 0; i < lessonTitles.length; i++) {
+  for (let i = 0; i < HABIT_LOOP_101.length; i++) {
     const order = i + 1;
+    const seed = HABIT_LOOP_101[i];
+    const quizValue: Prisma.InputJsonValue | Prisma.NullTypes.JsonNull = seed.quiz
+      ? (seed.quiz as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
     await prisma.lesson.upsert({
       where: { courseId_order: { courseId: course.id, order } },
-      update: { title: lessonTitles[i] },
+      update: {
+        title: seed.title,
+        content: seed.content,
+        xpReward: seed.xpReward,
+        quiz: quizValue,
+      },
       create: {
         courseId: course.id,
         order,
-        title: lessonTitles[i],
-        content: `Lesson ${order}: ${lessonTitles[i]}. Complete this lesson to earn XP and keep your streak alive.`,
-        xpReward: 10,
+        title: seed.title,
+        content: seed.content,
+        xpReward: seed.xpReward,
         gatingRule: order === 1 ? {} : { requiresLessonOrder: order - 1 },
+        quiz: quizValue,
       },
     });
   }
@@ -100,7 +98,7 @@ async function main() {
   console.log("✓ Seed complete");
   console.log(`  org:    ${org.slug}`);
   console.log(`  users:  ${users.map((u) => u.email).join(", ")}`);
-  console.log(`  course: ${course.slug} (${lessonTitles.length} lessons)`);
+  console.log(`  course: ${course.slug} (${HABIT_LOOP_101.length} lessons)`);
 }
 
 main()
