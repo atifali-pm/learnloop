@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Animated, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Markdown from "react-native-markdown-display";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -23,6 +24,7 @@ export default function LessonScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [reward, setReward] = useState<RewardToast | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const { courses } = await api.getCourses();
@@ -49,14 +51,33 @@ export default function LessonScreen() {
     })();
   }, [load]);
 
+  const quiz = lesson?.quiz ?? null;
+  const needsAllAnswers = Boolean(quiz && !lesson?.completed);
+  const allAnswered = quiz
+    ? quiz.questions.every((q) => Boolean(answers[q.id]))
+    : true;
+
   const onComplete = async () => {
     if (!lesson) return;
+    if (needsAllAnswers && !allAnswered) {
+      setError("Pick an answer for every question.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const result: CompleteLessonResponse = await api.completeLesson(lesson.id);
+      const result: CompleteLessonResponse = await api.completeLesson(
+        lesson.id,
+        needsAllAnswers ? answers : undefined,
+      );
       if (!result.ok) {
-        setError(result.reason);
+        if (result.quiz) {
+          setError(
+            `Got ${result.quiz.grade.correctCount} of ${result.quiz.grade.totalCount} correct. Review the lesson and try again.`,
+          );
+        } else {
+          setError(result.reason);
+        }
         return;
       }
       setReward({
@@ -116,10 +137,52 @@ export default function LessonScreen() {
         )}
 
         <View className="mt-6 rounded-2xl bg-white p-4">
-          <Text className="leading-6 text-text-700">
-            {lesson.content ?? "No content yet."}
-          </Text>
+          <Markdown style={markdownStyles}>{lesson.content ?? "No content yet."}</Markdown>
         </View>
+
+        {quiz && !lesson.completed && !reward && (
+          <View className="mt-6 rounded-2xl bg-white p-4">
+            <Text className="text-xs uppercase tracking-wider text-text-500">Quick check</Text>
+            <Text className="mt-1 text-sm text-text-500">
+              Answer all to mark this lesson complete.
+            </Text>
+
+            <View className="mt-4 gap-5">
+              {quiz.questions.map((q, qi) => (
+                <View key={q.id}>
+                  <Text className="text-sm font-semibold text-text-900">
+                    {qi + 1}. {q.prompt}
+                  </Text>
+                  <View className="mt-2 gap-1.5">
+                    {q.choices.map((c) => {
+                      const picked = answers[q.id] === c.id;
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onPress={() =>
+                            setAnswers((prev) => ({ ...prev, [q.id]: c.id }))
+                          }
+                          className={`flex-row items-center gap-2.5 rounded-md border p-2.5 ${
+                            picked
+                              ? "border-brand-500 bg-brand-50"
+                              : "border-zinc-200"
+                          }`}
+                        >
+                          <View
+                            className={`h-4 w-4 rounded-full border-2 ${
+                              picked ? "border-brand-500 bg-brand-500" : "border-zinc-300"
+                            }`}
+                          />
+                          <Text className="flex-1 text-sm">{c.text}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {!lesson.unlocked && !lesson.completed ? (
           <View className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -128,7 +191,7 @@ export default function LessonScreen() {
         ) : (
           <Pressable
             onPress={onComplete}
-            disabled={submitting || lesson.completed || !!reward}
+            disabled={submitting || lesson.completed || Boolean(reward)}
             className="mt-6 items-center rounded-xl bg-brand-600 py-3.5 active:opacity-90 disabled:opacity-60"
           >
             <Text className="text-base font-semibold text-white">
@@ -136,7 +199,9 @@ export default function LessonScreen() {
                 ? "Completed ✓"
                 : submitting
                   ? "Saving…"
-                  : "Mark complete"}
+                  : quiz
+                    ? "Submit answers"
+                    : "Mark complete"}
             </Text>
           </Pressable>
         )}
@@ -146,9 +211,7 @@ export default function LessonScreen() {
             onPress={() => router.replace(`/lesson/${nextLesson.id}`)}
             className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 active:opacity-80"
           >
-            <Text className="text-xs uppercase tracking-wider text-text-500">
-              Up next
-            </Text>
+            <Text className="text-xs uppercase tracking-wider text-text-500">Up next</Text>
             <Text className="mt-1 text-base font-semibold text-text-900">
               Lesson {nextLesson.order} · {nextLesson.title}
             </Text>
@@ -185,3 +248,27 @@ function RewardCard({ reward }: { reward: RewardToast }) {
     </Animated.View>
   );
 }
+
+const markdownStyles = {
+  body: { color: "#3f3f46", fontSize: 15, lineHeight: 22 },
+  heading2: { fontSize: 18, fontWeight: "700" as const, marginTop: 14, marginBottom: 6, color: "#18181b" },
+  heading3: { fontSize: 16, fontWeight: "700" as const, marginTop: 12, marginBottom: 6, color: "#18181b" },
+  paragraph: { marginTop: 6, marginBottom: 10 },
+  bullet_list: { marginTop: 4, marginBottom: 10 },
+  list_item: { marginVertical: 2 },
+  strong: { fontWeight: "700" as const },
+  em: { fontStyle: "italic" as const },
+  blockquote: {
+    borderLeftWidth: 3,
+    borderLeftColor: "#10b981",
+    paddingLeft: 12,
+    marginVertical: 10,
+    color: "#52525b",
+  },
+  code_inline: {
+    backgroundColor: "#f4f4f5",
+    paddingHorizontal: 4,
+    borderRadius: 3,
+    fontFamily: "monospace",
+  },
+};

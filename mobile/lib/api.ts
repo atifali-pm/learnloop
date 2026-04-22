@@ -13,8 +13,11 @@ import Constants from "expo-constants";
 import * as SecureStoreNative from "expo-secure-store";
 import type {
   ApiError,
+  CatalogResponse,
   CompleteLessonResponse,
   CoursesResponse,
+  EnrollResponse,
+  LeaderboardResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
@@ -129,11 +132,32 @@ export const api = {
     return request<CoursesResponse>("/api/mobile/courses");
   },
 
-  async completeLesson(lessonId: string): Promise<CompleteLessonResponse> {
+  async completeLesson(
+    lessonId: string,
+    answers?: Record<string, string>,
+  ): Promise<CompleteLessonResponse> {
     return request<CompleteLessonResponse>(
       `/api/mobile/lessons/${encodeURIComponent(lessonId)}/complete`,
-      { method: "POST" },
+      {
+        method: "POST",
+        body: answers ? JSON.stringify({ answers }) : undefined,
+      },
     );
+  },
+
+  async getLeaderboard(): Promise<LeaderboardResponse> {
+    return request<LeaderboardResponse>("/api/mobile/leaderboard");
+  },
+
+  async getCatalog(): Promise<CatalogResponse> {
+    return request<CatalogResponse>("/api/mobile/catalog");
+  },
+
+  async enroll(courseId: string): Promise<EnrollResponse> {
+    return request<EnrollResponse>("/api/mobile/enrollments", {
+      method: "POST",
+      body: JSON.stringify({ courseId }),
+    });
   },
 };
 
