@@ -50,6 +50,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ["expo-splash-screen", { image: "./assets/splash.png", resizeMode: "contain", backgroundColor: "#10b981" }],
     ],
     experiments: { typedRoutes: true },
-    extra: { apiUrl },
+    extra: {
+      apiUrl,
+      eas: { projectId: "0dac808d-4c4b-4520-adda-ec72f6abb66b" },
+    },
+    runtimeVersion: { policy: "appVersion" },
+    updates: { url: "https://u.expo.dev/0dac808d-4c4b-4520-adda-ec72f6abb66b" },
   };
 };
