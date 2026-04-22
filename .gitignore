@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Expo auto-generated stub at repo root
 /app.json
+
+# Claude Code local config (permission allowlist)
+.claude/
