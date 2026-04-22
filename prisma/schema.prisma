@@ -38,6 +38,9 @@ model Organization {
   badges           Badge[]
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
+  announcements    Announcement[]
+
+  defaultTimezone  String?
 }
 
 model User {
@@ -63,6 +66,8 @@ model User {
   userBadges    UserBadge[]
   streak        Streak?
   auditLogs     AuditLog[]    @relation("ActorAuditLogs")
+  ownedCourses  Course[]      @relation("OwnedCourses")
+  announcements Announcement[] @relation("AuthoredAnnouncements")
 
   @@index([organizationId])
   @@index([role])
@@ -112,6 +117,8 @@ model Course {
   title          String
   description    String?
   published      Boolean      @default(false)
+  ownerUserId    String?
+  owner          User?        @relation("OwnedCourses", fields: [ownerUserId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -120,6 +127,7 @@ model Course {
 
   @@unique([organizationId, slug])
   @@index([organizationId])
+  @@index([ownerUserId])
 }
 
 model Lesson {
@@ -265,6 +273,22 @@ model WebhookDelivery {
 
   @@index([endpointId, status])
   @@index([status, nextAttempt])
+}
+
+model Announcement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  authorUserId   String?
+  author         User?        @relation("AuthoredAnnouncements", fields: [authorUserId], references: [id], onDelete: SetNull)
+  title          String
+  body           String
+  published      Boolean      @default(true)
+  pinnedUntil    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, createdAt])
 }
 
 model AuditLog {

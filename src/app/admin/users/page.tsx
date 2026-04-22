@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import type { Role } from "@prisma/client";
+import { bulkChangeRole, bulkEnroll, bulkToggleDisabled } from "./actions";
 
 const ROLE_OPTIONS: { value: Role | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
@@ -40,7 +41,14 @@ export default async function UsersPage({
     take: 100,
   };
 
-  const users = await prisma.user.findMany(where);
+  const [users, courses] = await Promise.all([
+    prisma.user.findMany(where),
+    prisma.course.findMany({
+      where: { organizationId: admin.organizationId, published: true },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -93,10 +101,68 @@ export default async function UsersPage({
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <form id="bulk-form" className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="font-semibold uppercase tracking-wide text-zinc-500">
+            Bulk actions
+          </span>
+
+          <BulkForm action={bulkChangeRole} label="Change role to" disabled={courses.length === 0 && false}>
+            <select
+              name="role"
+              required
+              defaultValue="learner"
+              className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="learner">Learner</option>
+              <option value="instructor">Instructor</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="submit" className="rounded bg-zinc-900 px-2 py-1 text-xs text-white dark:bg-white dark:text-zinc-900">
+              Apply
+            </button>
+          </BulkForm>
+
+          <BulkForm action={bulkToggleDisabled} label="Set status">
+            <select
+              name="disabled"
+              required
+              defaultValue="true"
+              className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="true">Disable</option>
+              <option value="false">Enable</option>
+            </select>
+            <button type="submit" className="rounded bg-zinc-900 px-2 py-1 text-xs text-white dark:bg-white dark:text-zinc-900">
+              Apply
+            </button>
+          </BulkForm>
+
+          {courses.length > 0 && (
+            <BulkForm action={bulkEnroll} label="Enroll in">
+              <select
+                name="courseId"
+                required
+                defaultValue={courses[0].id}
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="rounded bg-zinc-900 px-2 py-1 text-xs text-white dark:bg-white dark:text-zinc-900">
+                Enroll
+              </button>
+            </BulkForm>
+          )}
+        </div>
+
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900">
             <tr>
+              <th className="w-10 px-3 py-2" />
               <th className="px-3 py-2">User</th>
               <th className="px-3 py-2">Role</th>
               <th className="hidden px-3 py-2 sm:table-cell">Status</th>
@@ -107,6 +173,16 @@ export default async function UsersPage({
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+                <td className="px-3 py-2">
+                  <input
+                    type="checkbox"
+                    name="userIds"
+                    value={u.id}
+                    form="bulk-form"
+                    aria-label={`Select ${u.email}`}
+                    disabled={u.id === admin.id}
+                  />
+                </td>
                 <td className="px-3 py-2">
                   <div className="font-medium">{u.name ?? "—"}</div>
                   <div className="text-xs text-zinc-500">{u.email}</div>
@@ -135,14 +211,64 @@ export default async function UsersPage({
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-sm text-zinc-500">
+                <td colSpan={6} className="px-3 py-8 text-center text-sm text-zinc-500">
                   No users match those filters.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </form>
+
+      <p className="text-xs text-zinc-500">
+        Tick users in the left column, then pick a bulk action. Self-demote and self-disable are blocked server-side.
+      </p>
     </div>
+  );
+}
+
+function BulkForm({
+  action,
+  label,
+  children,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  label: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  // A per-bulk-action form that shares the bulk-form's checkbox state via
+  // `form="bulk-form"` on the inputs above. To keep the submitted userIds, we
+  // render a hidden script copying them at submit time via a small form-specific
+  // hidden input population.
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <HiddenCheckboxMirror />
+      <span className="text-zinc-500">{label}</span>
+      {children}
+    </form>
+  );
+}
+
+// Copies every `userIds` checkbox from the bulk-form into this form on submit
+// so the Server Action gets the selected IDs.
+function HiddenCheckboxMirror() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          document.currentScript.closest('form').addEventListener('submit', (ev) => {
+            const me = ev.currentTarget;
+            me.querySelectorAll('input[name="userIds"]').forEach(n => n.remove());
+            const picks = document.querySelectorAll('input[form="bulk-form"][name="userIds"]:checked');
+            picks.forEach(p => {
+              const h = document.createElement('input');
+              h.type = 'hidden'; h.name = 'userIds'; h.value = p.value;
+              me.appendChild(h);
+            });
+          }, { capture: true });
+        `,
+      }}
+    />
   );
 }

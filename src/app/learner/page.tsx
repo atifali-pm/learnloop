@@ -1,10 +1,25 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/rbac";
 import { getLearnerOverview } from "@/lib/gamification/learner-view";
+import { prisma } from "@/lib/db";
 
 export default async function LearnerHome() {
   const user = await requireUser();
   const overview = await getLearnerOverview(user.id);
+
+  const announcements = await prisma.announcement.findMany({
+    where: {
+      organizationId: user.organizationId,
+      published: true,
+    },
+    orderBy: [{ pinnedUntil: "desc" }, { createdAt: "desc" }],
+    take: 3,
+  });
+  const now = new Date();
+  const visibleAnnouncements = announcements.filter((a) => {
+    if (a.pinnedUntil && a.pinnedUntil >= now) return true;
+    return now.getTime() - a.createdAt.getTime() < 14 * 24 * 60 * 60 * 1000;
+  });
 
   const xpPct =
     overview.xpToNext + overview.xpIntoLevel === 0
@@ -50,6 +65,34 @@ export default async function LearnerHome() {
           ⚙️ Settings
         </Link>
       </nav>
+
+      {visibleAnnouncements.length > 0 && (
+        <section className="flex flex-col gap-2">
+          {visibleAnnouncements.map((a) => {
+            const pinned = a.pinnedUntil && a.pinnedUntil >= now;
+            return (
+              <div
+                key={a.id}
+                className={`rounded-lg border p-3 ${
+                  pinned
+                    ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950"
+                    : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                }`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold">{a.title}</p>
+                  <span className="text-[10px] uppercase tracking-wide text-zinc-500">
+                    {pinned ? "📌 Pinned" : a.createdAt.toISOString().slice(0, 10)}
+                  </span>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+                  {a.body}
+                </p>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <section className="grid grid-cols-3 gap-3">
         <StatCard
