@@ -3,7 +3,7 @@
 A multi-tenant gamified learning platform. Learners complete daily lessons, earn XP, keep streaks alive, and unlock the next level. Admins run the system through a role-gated panel with user management, course authoring, analytics, exports, and HMAC-signed webhooks. There's also a companion Android app for learners that talks to the same backend.
 
 - Web: https://learnloop-ruby.vercel.app
-- Android APK: https://expo.dev/artifacts/eas/srpunJGAxfW26wMfndJAeC.apk
+- Android APK: https://github.com/atifali-pm/learnloop/releases/latest
 
 ## Explain it like I'm 13
 

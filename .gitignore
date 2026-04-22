@@ -51,3 +51,6 @@ next-env.d.ts
 **/.expo/
 **/.expo-shared/
 **/dist/
+
+# Expo auto-generated stub at repo root
+/app.json
