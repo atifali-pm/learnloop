@@ -23,12 +23,16 @@ Under the hood there are three big ideas:
 
 | Learner (mobile, Pixel 7) | Admin (desktop) |
 | :--- | :--- |
-| ![Learner dashboard with streak, level, XP bar, lesson list](docs/screenshots/02-learner-dashboard.png) | ![Admin overview with user, course, and XP counts](docs/screenshots/05-admin-overview.png) |
-| ![Lesson detail with mark-complete CTA](docs/screenshots/03-learner-lesson.png) | ![Filterable user management table](docs/screenshots/06-admin-users.png) |
-| ![Lesson marked complete with reward toast and next lesson CTA](docs/screenshots/04-learner-lesson-completed.png) | ![Analytics dashboard with DAU, funnel, top learners, retention](docs/screenshots/07-admin-analytics.png) |
-| ![Landing page on mobile](docs/screenshots/01-landing-mobile.png) | ![Webhook endpoint detail with signing secret and delivery log](docs/screenshots/08-admin-webhook-detail.png) |
-| &nbsp; | ![Course edit with full lesson CRUD](docs/screenshots/09-admin-course-edit.png) |
-| &nbsp; | ![Audit log viewer with action filter](docs/screenshots/10-admin-audit-log.png) |
+| ![Learner home with streak, XP, badges, pinned announcement, lesson list](docs/screenshots/03-learner-home.png) | ![Admin overview with user, course, and XP counts](docs/screenshots/09-admin-overview.png) |
+| ![Lesson detail with markdown content and quick-check quiz](docs/screenshots/04-learner-lesson-content-quiz.png) | ![User management with multi-select bulk actions](docs/screenshots/10-admin-users-bulk.png) |
+| ![Leaderboard: top 10 by XP with medal colors and self-highlight](docs/screenshots/06-learner-leaderboard.png) | ![Analytics dashboard with DAU, funnel, top learners, retention](docs/screenshots/14-admin-analytics.png) |
+| ![Catalog: browse and self-enroll in published courses](docs/screenshots/07-learner-catalog.png) | ![Webhook endpoint detail with HMAC signing secret and delivery log](docs/screenshots/15-admin-webhook-detail.png) |
+| ![Learner settings: profile and password](docs/screenshots/08-learner-settings.png) | ![Course edit with full lesson CRUD and reorder](docs/screenshots/11-admin-course-edit.png) |
+| ![Lesson completed with reward toast and next-lesson CTA](docs/screenshots/05-learner-lesson-completed.png) | ![Badge CRUD with xp / streak / lessons rule thresholds](docs/screenshots/12-admin-badges.png) |
+| ![Signin with one-tap demo account cards](docs/screenshots/02-signin-prefilled.png) | ![Announcements: create, pin for up to 60 days](docs/screenshots/13-admin-announcements.png) |
+| ![Landing page on mobile](docs/screenshots/01-landing-mobile.png) | ![Instructor dashboard scoped to owned courses with completion %](docs/screenshots/18-instructor-dashboard.png) |
+| &nbsp; | ![Audit log with action filter and grouped counts](docs/screenshots/16-admin-audit.png) |
+| &nbsp; | ![Org settings: default timezone applied to new users](docs/screenshots/17-admin-settings.png) |
 
 ## Phases / Milestones
 

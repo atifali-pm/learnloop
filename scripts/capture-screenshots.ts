@@ -7,9 +7,14 @@ import { mkdir } from "node:fs/promises";
 
 const PORT = Number(process.env.SMOKE_PORT ?? "3001");
 const BASE = `http://localhost:${PORT}`;
-const OUT_DIR = process.env.OUT_DIR ?? path.resolve(__dirname, "../docs/screenshots");
+const OUT_DIR =
+  process.env.OUT_DIR ?? path.resolve(__dirname, "../docs/screenshots");
 
-async function login(context: import("@playwright/test").BrowserContext, email: string, password: string) {
+async function login(
+  context: import("@playwright/test").BrowserContext,
+  email: string,
+  password: string,
+) {
   const page = await context.newPage();
   await page.goto(`${BASE}/login`);
   await page.getByLabel("Email").fill(email);
@@ -23,7 +28,10 @@ async function shoot(
   context: import("@playwright/test").BrowserContext,
   url: string,
   filename: string,
-  opts: { fullPage?: boolean; beforeShoot?: (page: import("@playwright/test").Page) => Promise<void> } = {},
+  opts: {
+    fullPage?: boolean;
+    beforeShoot?: (page: import("@playwright/test").Page) => Promise<void>;
+  } = {},
 ) {
   const page = await context.newPage();
   await page.goto(`${BASE}${url}`);
@@ -38,24 +46,88 @@ async function shoot(
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
 
-  // Prime the demo learner with 3 completed lessons so dashboard + analytics
-  // have real numbers (XP bar filled, streak lit, lessons marked done).
   const prisma = new PrismaClient();
-  const learner = await prisma.user.findUniqueOrThrow({ where: { email: "learner@demo.test" } });
 
+  const learner = await prisma.user.findUniqueOrThrow({
+    where: { email: "learner@demo.test" },
+  });
+  const admin = await prisma.user.findUniqueOrThrow({
+    where: { email: "admin@demo.test" },
+  });
+
+  // Reset learner so screenshots have a predictable state.
   await prisma.xpEvent.deleteMany({ where: { userId: learner.id } });
   await prisma.activity.deleteMany({ where: { userId: learner.id } });
   await prisma.userBadge.deleteMany({ where: { userId: learner.id } });
   await prisma.streak.deleteMany({ where: { userId: learner.id } });
-  await prisma.progress.deleteMany({ where: { enrollment: { userId: learner.id } } });
+  await prisma.progress.deleteMany({
+    where: { enrollment: { userId: learner.id } },
+  });
 
   const course = await prisma.course.findFirstOrThrow({
     where: { slug: "habit-loop-101" },
     include: { lessons: { orderBy: { order: "asc" } } },
   });
-  for (let i = 0; i < 3; i++) {
-    await completeLesson({ userId: learner.id, lessonId: course.lessons[i].id });
+
+  // Seed the first 2 lessons as completed so the learner home shows real
+  // streak + XP + badge activity. Answers pass the quiz.
+  for (let i = 0; i < 2; i++) {
+    const lesson = course.lessons[i];
+    const lessonRow = await prisma.lesson.findUniqueOrThrow({
+      where: { id: lesson.id },
+    });
+    const quiz = lessonRow.quiz as {
+      questions: {
+        id: string;
+        choices: { id: string; correct?: boolean }[];
+      }[];
+    } | null;
+    const answers: Record<string, string> = {};
+    if (quiz) {
+      for (const q of quiz.questions) {
+        const c = q.choices.find((ch) => ch.correct);
+        if (c) answers[q.id] = c.id;
+      }
+    }
+    await completeLesson({
+      userId: learner.id,
+      lessonId: lesson.id,
+      answers: Object.keys(answers).length > 0 ? answers : undefined,
+    });
   }
+
+  // Drop a pinned announcement so the learner home shows it.
+  const existing = await prisma.announcement.findFirst({
+    where: {
+      organizationId: admin.organizationId,
+      title: { startsWith: "Welcome to" },
+    },
+  });
+  if (!existing) {
+    await prisma.announcement.create({
+      data: {
+        organizationId: admin.organizationId,
+        authorUserId: admin.id,
+        title: "Welcome to Habit Loop 101",
+        body: "Finish one lesson today to light your first streak day. Come back tomorrow to keep it alive.",
+        published: true,
+        pinnedUntil: new Date(Date.now() + 30 * 86_400_000),
+      },
+    });
+  }
+
+  // Make one course owned by the instructor so the instructor dashboard
+  // has meaningful content when we capture it.
+  const instructorRow = await prisma.user.findUniqueOrThrow({
+    where: { email: "instructor@demo.test" },
+  });
+  if (course.ownerUserId !== instructorRow.id) {
+    await prisma.course.update({
+      where: { id: course.id },
+      data: { ownerUserId: instructorRow.id },
+    });
+  }
+
   await prisma.$disconnect();
 
   const browser = await chromium.launch();
@@ -65,13 +137,33 @@ async function main() {
     ...devices["Pixel 7"],
     baseURL: BASE,
   });
-  // Learner is the mobile-first persona.
-  await login(mobile, "learner@demo.test", "learner123");
+
   await shoot(mobile, "/", "01-landing-mobile.png");
-  await shoot(mobile, "/learner", "02-learner-dashboard.png");
-  // Next un-completed lesson is order 4 → click continue flow manually.
-  await shoot(mobile, `/learner/lessons/${course.lessons[3].id}`, "03-learner-lesson.png");
-  await shoot(mobile, `/learner/lessons/${course.lessons[0].id}`, "04-learner-lesson-completed.png");
+  await shoot(mobile, "/login?prefill=learner", "02-signin-prefilled.png");
+
+  await login(mobile, "learner@demo.test", "learner123");
+
+  await shoot(mobile, "/learner", "03-learner-home.png");
+
+  // Lesson 3 is the next unlocked, un-completed one. Shows content + quiz.
+  const lesson3 = course.lessons[2];
+  await shoot(
+    mobile,
+    `/learner/lessons/${lesson3.id}`,
+    "04-learner-lesson-content-quiz.png",
+  );
+
+  // Lesson 1 shows the completed state.
+  await shoot(
+    mobile,
+    `/learner/lessons/${course.lessons[0].id}`,
+    "05-learner-lesson-completed.png",
+  );
+
+  await shoot(mobile, "/learner/leaderboard", "06-learner-leaderboard.png");
+  await shoot(mobile, "/learner/catalog", "07-learner-catalog.png");
+  await shoot(mobile, "/learner/settings", "08-learner-settings.png");
+
   await mobile.close();
 
   console.log(`desktop (1440x900) → ${OUT_DIR}`);
@@ -80,14 +172,17 @@ async function main() {
     deviceScaleFactor: 1.5,
     baseURL: BASE,
   });
-  await login(desktop, "admin@demo.test", "admin123");
-  await shoot(desktop, "/admin", "05-admin-overview.png");
-  await shoot(desktop, "/admin/users", "06-admin-users.png");
-  await shoot(desktop, "/admin/analytics", "07-admin-analytics.png");
 
-  // Create a webhook endpoint if none exists so the detail page has content to show.
+  await login(desktop, "admin@demo.test", "admin123");
+
+  await shoot(desktop, "/admin", "09-admin-overview.png");
+  await shoot(desktop, "/admin/users", "10-admin-users-bulk.png");
+  await shoot(desktop, `/admin/courses/${course.id}`, "11-admin-course-edit.png");
+  await shoot(desktop, "/admin/badges", "12-admin-badges.png");
+  await shoot(desktop, "/admin/announcements", "13-admin-announcements.png");
+  await shoot(desktop, "/admin/analytics", "14-admin-analytics.png");
+
   const prisma2 = new PrismaClient();
-  const admin = await prisma2.user.findUniqueOrThrow({ where: { email: "admin@demo.test" } });
   let endpoint = await prisma2.webhookEndpoint.findFirst({
     where: { organizationId: admin.organizationId },
   });
@@ -104,19 +199,25 @@ async function main() {
   }
   await prisma2.$disconnect();
 
-  await shoot(desktop, `/admin/webhooks/${endpoint.id}`, "08-admin-webhook-detail.png");
-
-  const courseForEdit = await new PrismaClient().course.findFirstOrThrow({
-    where: { slug: "habit-loop-101" },
-  });
-  await shoot(desktop, `/admin/courses/${courseForEdit.id}`, "09-admin-course-edit.png");
-
-  await shoot(desktop, "/admin/audit", "10-admin-audit-log.png");
+  await shoot(desktop, `/admin/webhooks/${endpoint.id}`, "15-admin-webhook-detail.png");
+  await shoot(desktop, "/admin/audit", "16-admin-audit.png");
+  await shoot(desktop, "/admin/settings", "17-admin-settings.png");
 
   await desktop.close();
+
+  console.log("desktop (instructor view)");
+  const instructor = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 1.5,
+    baseURL: BASE,
+  });
+  await login(instructor, "instructor@demo.test", "instructor123");
+  await shoot(instructor, "/instructor", "18-instructor-dashboard.png");
+
+  await instructor.close();
   await browser.close();
 
-  console.log(`\n✓ ${10} screenshots captured to ${OUT_DIR}`);
+  console.log(`\n✓ 18 screenshots captured to ${OUT_DIR}`);
 }
 
 main().catch((err) => {
